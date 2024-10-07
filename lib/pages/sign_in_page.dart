@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/shared_pref.dart';
 import 'forget_password.dart';
-import 'home.dart';
+import 'home_screen/home.dart';
 import 'sign_up_page.dart';
 
 class SignInPage extends StatefulWidget {
@@ -57,13 +57,13 @@ class _SignInPageState extends State<SignInPage> {
 
       await _saveUserDetails();
 
-      ScaffoldMessenger.of(mounted as BuildContext).showSnackBar(const SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text("Login successful!", style: TextStyle(fontSize: 18)),
         backgroundColor: Colors.green,
       ));
 
       Navigator.pushReplacement(
-        mounted as BuildContext,
+        context,
         MaterialPageRoute(builder: (context) => const Home()),
       );
     } on FirebaseAuthException catch (e) {
@@ -77,7 +77,7 @@ class _SignInPageState extends State<SignInPage> {
           ? "Wrong password. Please try again."
           : "Error: ${e.message}";
 
-      ScaffoldMessenger.of(mounted as BuildContext).showSnackBar(SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(errorMessage, style: const TextStyle(fontSize: 18)),
         backgroundColor: Colors.red,
       ));
@@ -86,7 +86,7 @@ class _SignInPageState extends State<SignInPage> {
         isLoading = false;
       });
 
-      ScaffoldMessenger.of(mounted as BuildContext).showSnackBar(SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text("An unexpected error occurred: ${e.toString()}", style: const TextStyle(fontSize: 18)),
         backgroundColor: Colors.red,
       ));

@@ -1,4 +1,4 @@
-import 'package:chat_app/pages/home.dart';
+import 'package:chat_app/pages/home_screen/home.dart';
 import 'package:chat_app/pages/sign_in_page.dart';
 import 'package:chat_app/services/database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -59,6 +59,7 @@ class _SignUpState extends State<SignUp> {
           "Search-key": firstLetter,
           "Photo": "assets/images/default.png",
           "Id": id,
+          "isOnline": false,
         };
 
         await DatabaseMethods().addUserDetails(userInfoMap, id);
@@ -66,10 +67,9 @@ class _SignUpState extends State<SignUp> {
         await SharedPrefrenceHelper().saveUserDisplayName(nameController.text);
         await SharedPrefrenceHelper().saveUserEmail(emailController.text);
         await SharedPrefrenceHelper().saveUserPic("assets/images/default.png");
-        await SharedPrefrenceHelper()
-            .saveUserName(updateUserName.toUpperCase());
+        await SharedPrefrenceHelper().saveUserName(updateUserName.toUpperCase());
 
-        ScaffoldMessenger.of(mounted as BuildContext).showSnackBar(const SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text(
             "Registered Successfully",
             style: TextStyle(fontSize: 20),
@@ -78,7 +78,7 @@ class _SignUpState extends State<SignUp> {
           duration: Duration(seconds: 2),
         ));
         Navigator.pushReplacement(
-          mounted as BuildContext,
+          context,
           MaterialPageRoute(builder: (context) => const Home()),
         );
       } on FirebaseAuthException catch (e) {
@@ -97,7 +97,7 @@ class _SignUpState extends State<SignUp> {
             message = "Registration failed, please try again.";
         }
 
-        ScaffoldMessenger.of(mounted as BuildContext).showSnackBar(SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
             message,
             style: const TextStyle(fontSize: 18),
@@ -105,7 +105,7 @@ class _SignUpState extends State<SignUp> {
           backgroundColor: Colors.red,
         ));
       } catch (e) {
-        ScaffoldMessenger.of(mounted as BuildContext).showSnackBar(const SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text(
             "Registration failed, please try again.",
             style: TextStyle(fontSize: 18),
@@ -118,7 +118,7 @@ class _SignUpState extends State<SignUp> {
         });
       }
     } else {
-      ScaffoldMessenger.of(mounted as BuildContext).showSnackBar(const SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text(
           "Passwords do not match",
           style: TextStyle(fontSize: 18),
@@ -233,7 +233,7 @@ class _SignUpState extends State<SignUp> {
                                     return "Please enter email";
                                   }
                                   if (!RegExp(
-                                          r'^[\w-\.]+@([\w-]+\.)+[\w]{2,4}$')
+                                          r'^[\w-.]+@([\w-]+\.)+\w{2,4}$')
                                       .hasMatch(value)) {
                                     return "Enter a valid email";
                                   }
