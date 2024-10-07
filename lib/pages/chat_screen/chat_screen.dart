@@ -1,12 +1,11 @@
-import 'package:chat_app/pages/home.dart';
 import 'package:chat_app/services/database.dart';
 import 'package:chat_app/services/shared_pref.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:random_string/random_string.dart';
 import 'package:flutter_chat_bubble/chat_bubble.dart';
-import '../services/internet_connectivity_checker.dart';
+import '../../services/internet_connectivity_checker.dart';
+import 'app_bar_chat.dart';
 
 class ChatScreen extends StatefulWidget {
   final String name, profileUrl, username;
@@ -22,20 +21,59 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen>{
   final TextEditingController messageController = TextEditingController();
   String? myUserName, myProfilePic, myName, myEmail, messageId, chatRoomId;
   Stream? messageStream;
-  bool isDelivered = true;
-  bool hasSeen = false;
-  bool isOnline = false;
-  bool isConnected = true;
+  bool isReceiverOnline = false;
+  bool hasInternet = false;
   bool isMic = true;
 
   @override
   void initState() {
     super.initState();
+    markOtherMessagesAsSeen(chatRoomId);
+    checkInternetConnection();
+    receiversConnectivityChecker();
     onTheLoad();
+  }
+
+  Future<void> isInternetAvailable() async {
+    bool internetStatus = await isInternet();
+    setState(() {
+      hasInternet = internetStatus;
+    });
+  }
+
+  Future<void> checkMessageStatus(String messageId) async {
+    bool? hasSeen = await DatabaseMethods().getHasSeenStatus(chatRoomId!, messageId);
+    bool? isDelivered = await DatabaseMethods().getHasDeliveredStatus(chatRoomId!, messageId);
+    print("Message seen status: $hasSeen ,Message delivered status: $isDelivered");
+    setState(() {
+    });
+  }
+
+  void markOtherMessagesAsSeen(String? chatRoomId) async {
+    try {
+      // Get all messages in the chat room sent by the other user
+      QuerySnapshot messagesSnapshot = await FirebaseFirestore.instance
+          .collection('Chat-Rooms')
+          .doc(chatRoomId)
+          .collection('Chats')
+          .where('Send-by', isNotEqualTo: myUserName) // Filter messages sent by the other user
+          .get();
+
+      // Update each message to set 'hasBeenSeen' to true
+      WriteBatch batch = FirebaseFirestore.instance.batch();
+      for (var messageDoc in messagesSnapshot.docs) {
+        batch.update(messageDoc.reference, {'hasBeenSeen': true});
+      }
+      // Commit the batch
+      await batch.commit();
+      print('Other user\'s messages marked as seen');
+    } catch (e) {
+      print('Error marking messages as seen: $e');
+    }
   }
 
   void toggleChatSuffix() {
@@ -61,6 +99,13 @@ class _ChatScreenState extends State<ChatScreen> {
   // Fetch messages for the chat room
   Future<void> getAndSetMessages() async {
     messageStream = await DatabaseMethods().getChatRowMessages(chatRoomId!);
+    messageStream?.listen((snapshot) {
+      for (var doc in snapshot.docs) {
+        // bool hasSeen = doc["hasBeenSeen"];
+        // bool isDelivered = doc["hasBeenDelivered"];
+        checkMessageStatus(doc.id);
+      }
+    });
     setState(() {});
   }
 
@@ -70,9 +115,33 @@ class _ChatScreenState extends State<ChatScreen> {
     await getAndSetMessages();
   }
 
+    Future<bool> getUserOnlineStatus(String username) async {
+      try {
+        QuerySnapshot userSnapshot = await FirebaseFirestore.instance
+            .collection('Users')
+            .where('Username', isEqualTo: username)
+            .get();
+
+        if (userSnapshot.docs.isNotEmpty) {
+          // Get the first document (assuming usernames are unique)
+          DocumentSnapshot userDoc = userSnapshot.docs.first;
+          return userDoc['isOnline'] ?? false; // Return online status or false if not available
+        }
+      } catch (e) {
+        print("Error fetching user status: $e");
+      }
+      return false; // Default to offline if user not found
+    }
+
+  receiversConnectivityChecker() async {
+    String? username = chatRoomId?.replaceAll("_", "").replaceAll(myUserName as Pattern, "");
+    isReceiverOnline = await getUserOnlineStatus(username!);
+    setState(() {});
+  }
+
   // Check for internet connectivity
   Future<void> checkInternetConnection() async {
-    isConnected = await isInternet();
+    isInternetAvailable();
     setState(() {});
   }
 
@@ -84,7 +153,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   // Display individual chat message
-  Widget chatMessageTile(String message, bool sendByMe, String time) {
+  Widget chatMessageTile(String message, bool sendByMe, String time,bool hasSeen, bool hasBeenDelivered) {
     return Row(
       mainAxisAlignment:
       sendByMe ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -129,7 +198,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                       ),
                       const SizedBox(width: 5),
-                      messageStatusChecker(), // Your message status icon logic
+                      sendByMe? messageStatusChecker(hasSeen,hasBeenDelivered):const SizedBox(), // Your message status icon logic
                     ],
                   ),
                 ],
@@ -142,31 +211,31 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   // Show message status (double ticks, single tick, etc.)
-  Widget messageStatusChecker() {
-    if (isConnected == true) {
-      if (isDelivered == true) {
-        if (isOnline == true) {
-          return Icon(Icons.done_all,
-              color: hasSeen ? Colors.blue : Colors.grey,
-              size: 15); // Seen or delivered
-        } else {
-          return const Icon(
-            Icons.done,
-            size: 15,
-            color: Colors.grey,
-          ); // Delivered but not online
-        }
-      } else {
-        return const Icon(
-          Icons.access_time_rounded,
-          size: 15,
-          color: Colors.grey,
-        ); // Message not delivered yet
-      }
-    } else {
-      return const Icon(Icons.access_time_rounded,
-          size: 15, color: Colors.grey); // Not connected to the internet
+  messageStatusChecker(bool hasSeen, bool isDelivered) {
+    if (!hasInternet) {
+      return const Icon(Icons.error_outline, size: 15, color: Colors.grey);
     }
+
+    if (isDelivered) {
+      // Check if the receiver is online
+      if (isReceiverOnline) {
+        // Show double ticks, blue if seen, gray if not
+        return Icon(
+          Icons.done_all,
+          color: hasSeen ? Colors.blue : Colors.grey,
+          size: 15,
+        );
+      } else {
+        // Show double ticks in gray if delivered but receiver is offline
+        return const Icon(
+          Icons.done,
+          color: Colors.grey,
+          size: 15,
+        );
+      }
+    }
+    // Show clock icon if not delivered yet
+    return const Icon(Icons.access_time_rounded, size: 15, color: Colors.grey);
   }
 
   // Build chat messages using StreamBuilder
@@ -182,21 +251,38 @@ class _ChatScreenState extends State<ChatScreen> {
           return const Center(child: Text("No messages yet"));
         } else {
           return ListView.builder(
-            padding: const EdgeInsets.only(bottom: 90, top: 130),
-            itemCount: snapshot.data.docs.length,
-            reverse: true,
-            itemBuilder: (context, index) {
-              DocumentSnapshot ds = snapshot.data.docs[index];
-              Timestamp timestamp = ds["Time"];
-              String formattedTime = DateFormat('h:mm a').format(timestamp.toDate()); // Format Timestamp
-              return chatMessageTile(
-                  ds["Message"], myUserName == ds["Send-by"], formattedTime);
-            },
-          );
+              padding: const EdgeInsets.only(bottom: 90, top: 130),
+              itemCount: snapshot.data.docs.length,
+              reverse: true,
+              itemBuilder: (context, index) {
+                DocumentSnapshot ds = snapshot.data.docs[index];
+
+                // Check if the timestamp is null, and set a default value if necessary
+                Timestamp? timestamp = ds["Time-stamp"];
+                String formattedTime;
+
+                if (timestamp != null) {
+                  // Format the timestamp if it exists
+                  formattedTime =
+                      DateFormat('h:mm a').format(timestamp.toDate());
+                } else {
+                  // Default time for messages without a timestamp
+                  formattedTime = "Just now";
+                }
+
+                return chatMessageTile(
+                    ds["Message"],
+                    myUserName == ds["Send-by"],
+                    formattedTime,
+                    ds["hasBeenSeen"],
+                    ds["hasBeenDelivered"],
+                );
+              });
         }
       },
     );
   }
+
 
   // Send a message
   void addMessage(bool sendClicked) {
@@ -206,32 +292,38 @@ class _ChatScreenState extends State<ChatScreen> {
       messageController.clear(); // Clear the message input after sending
 
       DateTime now = DateTime.now();
-      String formattedDate = DateFormat("yMMMd").format(now); // Format current date
-      String formattedTime = DateFormat("h:mma").format(now); // Format current time
+      String formattedTime = DateFormat("h:mma").format(now); // Format c
 
       // Map to hold the message information
       Map<String, dynamic> messageInfoMap = {
         "Message": message,
         "Send-by": myUserName,
-        "Date": formattedDate, // Store formatted date
-        "Time": formattedTime, // Store formatted time
+        "Time": formattedTime, // Store formatted date
+        "Time-stamp": FieldValue.serverTimestamp(), // Store formatted time
         "Photo": myProfilePic,
+        "hasBeenSeen":false,
+        "hasBeenDelivered":false,
       };
 
       // Generate a new messageId if it is null
-      messageId ??= randomAlphaNumeric(10);
+      messageId ??= FirebaseFirestore.instance.collection("Chats").doc().id;
 
       // Add the message to the database
-      DatabaseMethods().addMessage(chatRoomId!, messageId!, messageInfoMap).then((value) {
+      DatabaseMethods()
+          .addMessage(chatRoomId!, messageId!, messageInfoMap,myUserName!)
+          .then((value) {
         // If successful, update the last message sent info
         Map<String, dynamic> lastMessageInfoMap = {
           "Last-message": message,
-          "Last-message-send-date": formattedDate, // Store last message date
-          "Last-message-send-time": formattedTime, // Store last message time
+          "Last-message-send-time-stamp": FieldValue.serverTimestamp(),
+          // Store last message date
+          "Last-message-send-time": formattedTime,
+          // Store last message time
           "Last-message-send-by": myUserName,
         };
-
-        DatabaseMethods().updateLastMessageSent(chatRoomId!, lastMessageInfoMap).catchError((error) {
+        DatabaseMethods()
+            .updateLastMessageSent(chatRoomId!, lastMessageInfoMap)
+            .catchError((error) {
           print("Error updating last message: $error");
         });
 
@@ -248,65 +340,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF008069),
-        title: Text(
-          widget.name,
-          style: const TextStyle(
-            color: Color(0xFFFFFFFF),
-            fontSize: 24,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-        leadingWidth: MediaQuery.of(context).size.width / 5.27,
-        leading: Row(
-          children: [
-            GestureDetector(
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const Home()),
-                );
-              },
-              child: const Icon(Icons.arrow_back_rounded,
-                  size: 28, color: Color(0xFFFFFFFF)),
-            ),
-            const SizedBox(
-              width: 10,
-            ),
-            ClipOval(
-              child: Image.asset(
-                widget.profileUrl,
-                height: 40,
-                width: 40,
-                fit: BoxFit.cover,
-              ),
-            )
-          ],
-        ),
-        actions: [
-          InkWell(
-              onTap: () {},
-              child: const Icon(IconData(0xe6a8, fontFamily: 'MaterialIcons'),
-                  color: Colors.white, size: 25)),
-          const SizedBox(
-            width: 15,
-          ),
-          InkWell(
-              onTap: () {},
-              child: const Icon(Icons.call, color: Colors.white, size: 22)),
-          const SizedBox(
-            width: 15,
-          ),
-          InkWell(
-              onTap: () {},
-              child: const Icon(
-                Icons.more_vert,
-                color: Colors.white,
-                size: 25,
-              ))
-        ],
-      ),
+      appBar: appBarChatScreen(context,widget.name,widget.username, widget.profileUrl, ),
       body: Stack(
         children: [
           Container(
@@ -330,12 +364,14 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: Container(
                     height: 55,
                     width: (MediaQuery.of(context).size.width / 10) * 9,
-                    margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    margin: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 10),
                     child: Material(
                       elevation: 4,
                       borderRadius: BorderRadius.circular(20),
                       child: Padding(
-                        padding: const EdgeInsets.only(left: 12, right: 12.0, bottom: 0, top: 10),
+                        padding: const EdgeInsets.only(
+                            left: 12, right: 12.0, bottom: 0, top: 10),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
@@ -356,21 +392,24 @@ class _ChatScreenState extends State<ChatScreen> {
                                   border: InputBorder.none,
                                   hintText: "Message",
                                   hintStyle: TextStyle(color: Colors.black45),
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 5),
                                 ),
                               ),
                             ),
                             isMic
                                 ? Row(
                               children: [
-                                const Icon(Icons.attach_file, color: Colors.grey),
+                                const Icon(Icons.attach_file,
+                                    color: Colors.grey),
                                 const SizedBox(width: 15),
                                 Container(
                                   height: 25,
                                   width: 25,
                                   decoration: BoxDecoration(
                                     color: Colors.grey,
-                                    borderRadius: BorderRadius.circular(20),
+                                    borderRadius:
+                                    BorderRadius.circular(20),
                                   ),
                                   child: const Icon(
                                     Icons.currency_rupee_rounded,
@@ -379,10 +418,12 @@ class _ChatScreenState extends State<ChatScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 15),
-                                const Icon(Icons.camera_alt_outlined, color: Colors.grey),
+                                const Icon(Icons.camera_alt_outlined,
+                                    color: Colors.grey),
                               ],
                             )
-                                : const Icon(Icons.attach_file, size: 25, color: Colors.grey),
+                                : const Icon(Icons.attach_file,
+                                size: 25, color: Colors.grey),
                           ],
                         ),
                       ),
@@ -409,14 +450,14 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Center(
                       child: isMic
                           ? const Icon(Icons.mic, color: Colors.white, size: 28)
-                          : const Icon(Icons.send_rounded, color: Colors.white, size: 25),
+                          : const Icon(Icons.send_rounded,
+                          color: Colors.white, size: 25),
                     ),
                   ),
                 )
               ],
             ),
           )
-
         ],
       ),
     );

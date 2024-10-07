@@ -2,7 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'shared_pref.dart';
 
 class DatabaseMethods {
-  Future<bool> addUserDetails(Map<String, dynamic> userInfoMap, String id) async {
+  Future<bool> addUserDetails(Map<String, dynamic> userInfoMap,
+      String id) async {
     try {
       await FirebaseFirestore.instance
           .collection("Users")
@@ -23,7 +24,9 @@ class DatabaseMethods {
           .get();
     } catch (e) {
       print("Error fetching user by email: $e");
-      return await FirebaseFirestore.instance.collection("Users").limit(0).get(); // Return an empty QuerySnapshot
+      return await FirebaseFirestore.instance.collection("Users")
+          .limit(0)
+          .get(); // Return an empty QuerySnapshot
     }
   }
 
@@ -35,7 +38,9 @@ class DatabaseMethods {
           .get();
     } catch (e) {
       print("Error fetching user by username: $e");
-      return await FirebaseFirestore.instance.collection("Users").limit(0).get(); // Return an empty QuerySnapshot
+      return await FirebaseFirestore.instance.collection("Users")
+          .limit(0)
+          .get(); // Return an empty QuerySnapshot
     }
   }
 
@@ -48,11 +53,14 @@ class DatabaseMethods {
           .get();
     } catch (e) {
       print("Error during search: $e");
-      return await FirebaseFirestore.instance.collection("Users").limit(0).get(); // Return an empty QuerySnapshot
+      return await FirebaseFirestore.instance.collection("Users")
+          .limit(0)
+          .get(); // Return an empty QuerySnapshot
     }
   }
 
-  Future<bool> createChatRoom(String chatRoomId, Map<String, dynamic> chatRoomInfoMap) async {
+  Future<bool> createChatRoom(String chatRoomId,
+      Map<String, dynamic> chatRoomInfoMap) async {
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection("Chat-Rooms")
@@ -75,28 +83,63 @@ class DatabaseMethods {
     }
   }
 
-  Future<bool> addMessage(String chatRoomId, String messageId, Map<String, dynamic> messageInfoMap) async {
+  Future<bool> addMessage(
+      String chatRoomId,
+      String messageId,
+      Map<String, dynamic> messageInfoMap,
+      String myUserName) async {
     try {
+      // Add message to the Firestore collection
       await FirebaseFirestore.instance
           .collection("Chat-Rooms")
           .doc(chatRoomId)
           .collection("Chats")
           .doc(messageId)
           .set(messageInfoMap);
+
       print("Message added successfully.");
-      return true; // Return true on success
+
+      // Get all messages in the chat room sent by the current user
+      QuerySnapshot messagesSnapshot = await FirebaseFirestore.instance
+          .collection('Chat-Rooms')
+          .doc(chatRoomId)
+          .collection('Chats')
+          .where('Send-by', isEqualTo: myUserName)
+          .get();
+
+      // Batch update to mark messages as delivered
+      WriteBatch batch = FirebaseFirestore.instance.batch();
+      for (var messageDoc in messagesSnapshot.docs) {
+        batch.update(messageDoc.reference, {'hasBeenDelivered': true});
+      }
+      // Commit the batch update
+      await batch.commit();
+      print('Messages marked as delivered');
+
+      return true; // Success
     } catch (e) {
-      print("Error adding message: $e");
-      return false; // Return false on failure
+      print('Error occurred: $e');
+      return false; // Return false if any error occurs
     }
   }
 
   Future<void> updateLastMessageSent(String chatRoomId, Map<String, dynamic> lastMessageInfoMap) async {
+    DocumentReference docRef = FirebaseFirestore.instance
+        .collection('Chat-Rooms')
+        .doc(chatRoomId);
+
     try {
-      await FirebaseFirestore.instance
-          .collection("Chat-Rooms")
-          .doc(chatRoomId)
-          .update(lastMessageInfoMap);
+      // Check if the document exists
+      DocumentSnapshot docSnapshot = await docRef.get();
+
+      if (docSnapshot.exists) {
+        // If the document exists, update it
+        await docRef.update(lastMessageInfoMap);
+      } else {
+        // If the document does not exist, create it with some default data
+        await docRef.set(lastMessageInfoMap);
+      }
+      print("Last message updated successfully.");
     } catch (e) {
       print("Error updating last message: $e");
     }
@@ -107,7 +150,7 @@ class DatabaseMethods {
         .collection("Chat-Rooms")
         .doc(chatRoomId)
         .collection("Chats")
-        .orderBy("Date", descending: true)
+        .orderBy("Time-stamp", descending: true)
         .snapshots();
   }
 
@@ -119,7 +162,9 @@ class DatabaseMethods {
           .get();
     } catch (e) {
       print("Error fetching user info: $e");
-      return await FirebaseFirestore.instance.collection("Users").limit(0).get(); // Return an empty QuerySnapshot
+      return await FirebaseFirestore.instance.collection("Users")
+          .limit(0)
+          .get(); // Return an empty QuerySnapshot
     }
   }
 
@@ -127,18 +172,69 @@ class DatabaseMethods {
     String? myUserName = await SharedPrefrenceHelper().getUserName();
     return FirebaseFirestore.instance
         .collection("Chat-Rooms")
-        .orderBy("Date", descending: true)
+        .orderBy("Time-stamp", descending: true)
         .where("Users", arrayContains: myUserName!)
         .snapshots();
   }
 
   Future<bool> doesChatRoomExist(String chatRoomId) async {
     try {
-      final chatRoom = await FirebaseFirestore.instance.collection("Chat-Rooms").doc(chatRoomId).get();
+      final chatRoom = await FirebaseFirestore.instance.collection("Chat-Rooms")
+          .doc(chatRoomId)
+          .get();
       return chatRoom.exists;
     } catch (e) {
       print("Error checking chat room existence: $e");
       return false; // Return false on error
     }
   }
+
+  Future<bool?> getHasSeenStatus(String chatRoomId, String messageId) async {
+    try {
+      // Fetch the specific message document by ID
+      DocumentSnapshot messageDoc = await FirebaseFirestore.instance
+          .collection('Chat-Rooms')
+          .doc(chatRoomId)
+          .collection('Chats')
+          .doc(messageId)
+          .get();
+
+      // Check if the document exists
+      if (messageDoc.exists) {
+        // Return the hasBeenSeen status
+        return messageDoc['hasBeenSeen'];
+      } else {
+        print("Message not found");
+        return null; // Message not found
+      }
+    } catch (e) {
+      print("Error fetching hasBeenSeen status: $e");
+      return null; // Return null on error
+    }
+  }
+
+    Future<bool?> getHasDeliveredStatus(String chatRoomId,
+        String messageId) async {
+      try {
+        // Fetch the specific message document by ID
+        DocumentSnapshot messageDoc = await FirebaseFirestore.instance
+            .collection('Chat-Rooms')
+            .doc(chatRoomId)
+            .collection('Chats')
+            .doc(messageId)
+            .get();
+
+        // Check if the document exists
+        if (messageDoc.exists) {
+          // Return the hasBeenSeen status
+          return messageDoc['hasBeenDelivered'];
+        } else {
+          print("Message not found");
+          return null; // Message not found
+        }
+      } catch (e) {
+        print("Error fetching hasBeenDelivered status: $e");
+        return null; // Return null on error
+      }
+    }
 }

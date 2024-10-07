@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 import '../home_screen/home.dart';
@@ -19,9 +18,10 @@ AppBar appBarChatScreen(BuildContext context, String name, String username, Stri
       children: [
         GestureDetector(
           onTap: () {
-            Navigator.pushReplacement(
+            Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (context) => const Home()),
+                  (Route<dynamic> route) => false, // This clears the entire stack
             );
           },
           child: const Icon(Icons.arrow_back_rounded,

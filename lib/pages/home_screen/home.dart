@@ -1,8 +1,10 @@
 import 'package:chat_app/services/database.dart';
 import 'package:chat_app/services/shared_pref.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'chat_screen.dart';
+import '../../services/internet_connectivity_checker.dart';
+import '../chat_screen/chat_screen.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -11,7 +13,7 @@ class Home extends StatefulWidget {
   State<Home> createState() => _HomeState();
 }
 
-class _HomeState extends State<Home> {
+class _HomeState extends State<Home> with WidgetsBindingObserver {
   bool search = false;
   bool isLoading = false; // Loading state variable
   var queryResultSet = [];
@@ -37,14 +39,45 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
+    isInternet();
+    updateUserStatus(true);
     onTheLoad();
+  }
+
+  @override
+  void dispose() {
+    updateUserStatus(false);
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      updateUserStatus(false); // Set offline when app is in background
+    } else if (state == AppLifecycleState.resumed) {
+      isInternet(); // Check connectivity when app resumes
+    }
+  }
+
+  void updateUserStatus(bool online) async {
+    User? user = FirebaseAuth.instance.currentUser; // Get current user
+    if (user != null) {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
+        {
+          'isOnline': online,
+          'lastSeen': online ? FieldValue.serverTimestamp() : null,
+        },
+        SetOptions(merge: true), // Merge with existing data
+      );
+    }
   }
 
   getChatRoomIdByUsername(String a, String b) {
     if (a.substring(0, 1).codeUnitAt(0) > b.substring(0, 1).codeUnitAt(0)) {
-      return "$b\_$a";
+      return "${b}_$a";
     } else {
-      return "a\_$b";
+      return "a_$b";
     }
   }
 
@@ -167,7 +200,7 @@ class _HomeState extends State<Home> {
           Expanded(
             child: search
                 ? searchWidget()
-                : ChatRoomList(), // Display searchWidget or ChatRoomList
+                : chatRoomList(), // Display searchWidget or ChatRoomList
           ),
         ],
       ),
@@ -200,7 +233,7 @@ class _HomeState extends State<Home> {
               );
   }
 
-  Widget ChatRoomList() {
+  Widget chatRoomList() {
     return StreamBuilder(
       stream: chatRoomsStream,
       builder: (
@@ -308,7 +341,8 @@ class _HomeState extends State<Home> {
               ),
               radius: 30,
             ),
-            title: Text(data["Username"] ?? "No Username"),
+            title: Text(myUserName == data["Username"]
+                ? "${data["Username"].toString()} (You)" :data["Username"].toString()),
             subtitle: Text(data["Name"] ?? "No Name"),
             trailing: const Icon(Icons.arrow_forward),
             onTap: () async {
@@ -384,6 +418,8 @@ class _ChatRoomListTileState extends State<ChatRoomListTile> {
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: 20,
+      width: 23,
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
