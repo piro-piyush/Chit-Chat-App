@@ -13,7 +13,6 @@ Chit Chat is a real-time chat application built using Flutter and Firebase. It e
 - [License](#license)
 - [Contact](#contact)
 
-
 ## Features
 
 - **Real-time Messaging**: Users can send and receive messages instantly with real-time updates.
