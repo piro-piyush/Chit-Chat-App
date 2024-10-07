@@ -46,7 +46,7 @@ To get started with the **Chit Chat** app locally, follow these steps:
 1. **Clone the Repository:**
 
     ```bash
-    git clone https://github.com/your-username/chit-chat.git
+    git clone https://github.com/piro-piyush/Chit-Chat-App
     ```
 
 2. **Navigate to the Project Directory:**
