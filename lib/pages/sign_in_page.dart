@@ -59,12 +59,13 @@ class _SignInPageState extends State<SignInPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text("Login successful!", style: TextStyle(fontSize: 18)),
-        backgroundColor: Colors.green,
+        backgroundColor: Color(0xFF008069),
       ));
 
-      Navigator.pushReplacement(
+      Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const Home()),
+            (Route<dynamic> route) => false, // This clears the entire stack
       );
     } on FirebaseAuthException catch (e) {
       setState(() {
@@ -115,7 +116,7 @@ class _SignInPageState extends State<SignInPage> {
               width: MediaQuery.of(context).size.width,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF7f30fe), Color(0xFF6380fb)],
+                  colors: [Color(0xFF318776),Color(0xFF008069)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -137,7 +138,7 @@ class _SignInPageState extends State<SignInPage> {
                   const Center(
                     child: Text(
                       "Login to your account",
-                      style: TextStyle(color: Color(0xFFbbb0ff), fontSize: 18, fontWeight: FontWeight.w500),
+                      style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.w500),
                     ),
                   ),
                   Container(
@@ -147,7 +148,7 @@ class _SignInPageState extends State<SignInPage> {
                       borderRadius: BorderRadius.circular(10),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
-                        height: MediaQuery.of(context).size.height / 2.3,
+                        height: MediaQuery.of(context).size.height / 2.2,
                         width: MediaQuery.of(context).size.width,
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -179,7 +180,7 @@ class _SignInPageState extends State<SignInPage> {
                                   },
                                   decoration: const InputDecoration(
                                     border: InputBorder.none,
-                                    prefixIcon: Icon(Icons.mail, color: Color(0xFF7f30fe)),
+                                    prefixIcon: Icon(Icons.mail, color: Color(0xFF008069)),
                                   ),
                                 ),
                               ),
@@ -206,7 +207,7 @@ class _SignInPageState extends State<SignInPage> {
                                   obscureText: true,
                                   decoration: const InputDecoration(
                                     border: InputBorder.none,
-                                    prefixIcon: Icon(Icons.lock, color: Color(0xFF7f30fe)),
+                                    prefixIcon: Icon(Icons.lock, color: Color(0xFF008069)),
                                   ),
                                 ),
                               ),
@@ -244,7 +245,7 @@ class _SignInPageState extends State<SignInPage> {
                                       child: Container(
                                         padding: const EdgeInsets.all(10),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFF6380fb),
+                                          color: const Color(0xFF008069),
                                           borderRadius: BorderRadius.circular(10),
                                         ),
                                         child: const Center(
@@ -276,7 +277,7 @@ class _SignInPageState extends State<SignInPage> {
                             MaterialPageRoute(builder: (context) => const SignUp()),
                           );
                         },
-                        child: const Text("Sign Up Now!"),
+                        child: const Text("Sign Up Now!",style: TextStyle(color: Color(0xFF008069)),),
                       )
                     ],
                   )
