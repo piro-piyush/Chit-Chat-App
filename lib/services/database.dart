@@ -2,8 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'shared_pref.dart';
 
 class DatabaseMethods {
-  Future<bool> addUserDetails(Map<String, dynamic> userInfoMap,
-      String id) async {
+  Future<bool> addUserDetails(Map<String, dynamic> userInfoMap, String id) async {
     try {
       await FirebaseFirestore.instance
           .collection("Users")
@@ -59,8 +58,7 @@ class DatabaseMethods {
     }
   }
 
-  Future<bool> createChatRoom(String chatRoomId,
-      Map<String, dynamic> chatRoomInfoMap) async {
+  Future<bool> createChatRoom(String chatRoomId, Map<String, dynamic> chatRoomInfoMap) async {
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection("Chat-Rooms")
@@ -83,11 +81,7 @@ class DatabaseMethods {
     }
   }
 
-  Future<bool> addMessage(
-      String chatRoomId,
-      String messageId,
-      Map<String, dynamic> messageInfoMap,
-      String myUserName) async {
+  Future<bool> addMessage(String chatRoomId, String messageId, Map<String, dynamic> messageInfoMap, String myUserName) async {
     try {
       // Add message to the Firestore collection
       await FirebaseFirestore.instance
@@ -172,7 +166,7 @@ class DatabaseMethods {
     String? myUserName = await SharedPrefrenceHelper().getUserName();
     return FirebaseFirestore.instance
         .collection("Chat-Rooms")
-        .orderBy("Time-stamp", descending: true)
+        .orderBy("Last-message-send-time-stamp", descending: true)
         .where("Users", arrayContains: myUserName!)
         .snapshots();
   }
@@ -213,8 +207,7 @@ class DatabaseMethods {
     }
   }
 
-    Future<bool?> getHasDeliveredStatus(String chatRoomId,
-        String messageId) async {
+    Future<bool?> getHasDeliveredStatus(String chatRoomId, String messageId) async {
       try {
         // Fetch the specific message document by ID
         DocumentSnapshot messageDoc = await FirebaseFirestore.instance
@@ -237,4 +230,32 @@ class DatabaseMethods {
         return null; // Return null on error
       }
     }
+
+  Future<bool> getUserOnlineStatusByUsername(String username) async {
+    try {
+      // Fetch user document where 'Username' matches the provided username
+      QuerySnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection("Users")
+          .where("Username", isEqualTo: username)
+          .get();
+
+      // If a user document is found
+      if (userSnapshot.docs.isNotEmpty) {
+        // Get the first document (since usernames should be unique)
+        DocumentSnapshot userDoc = userSnapshot.docs.first;
+
+        // Check and return 'isOnline' status, defaulting to false if not found
+        bool isOnline = userDoc['isOnline'] ?? false;
+        return isOnline;
+      } else {
+        // User not found, return false
+        print("User not found.");
+        return false;
+      }
+    } catch (e) {
+      // Error occurred while fetching user status
+      print("Error fetching user online status: $e");
+      return false; // Return false in case of an error
+    }
+  }
 }
