@@ -31,7 +31,7 @@ AppBar appBarChatScreen(BuildContext context, String name, String username, Stri
           width: 10,
         ),
         ClipOval(
-          child: Image.asset(
+          child: Image.network(
             profileUrl,
             height: 40,
             width: 40,
