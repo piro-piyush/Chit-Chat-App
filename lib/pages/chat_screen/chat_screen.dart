@@ -21,7 +21,7 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen>{
+class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController messageController = TextEditingController();
   String? myUserName, myProfilePic, myName, myEmail, messageId, chatRoomId;
   Stream? messageStream;
@@ -32,10 +32,8 @@ class _ChatScreenState extends State<ChatScreen>{
   @override
   void initState() {
     super.initState();
-    markOtherMessagesAsSeen(chatRoomId);
-    checkInternetConnection();
-    receiversConnectivityChecker();
     onTheLoad();
+    markOtherMessagesAsSeen(chatRoomId);
   }
 
   Future<void> isInternetAvailable() async {
@@ -46,11 +44,13 @@ class _ChatScreenState extends State<ChatScreen>{
   }
 
   Future<void> checkMessageStatus(String messageId) async {
-    bool? hasSeen = await DatabaseMethods().getHasSeenStatus(chatRoomId!, messageId);
-    bool? isDelivered = await DatabaseMethods().getHasDeliveredStatus(chatRoomId!, messageId);
-    print("Message seen status: $hasSeen ,Message delivered status: $isDelivered");
-    setState(() {
-    });
+    bool? hasSeen =
+        await DatabaseMethods().getHasSeenStatus(chatRoomId!, messageId);
+    bool? isDelivered =
+        await DatabaseMethods().getHasDeliveredStatus(chatRoomId!, messageId);
+    print(
+        "Message seen status: $hasSeen ,Message delivered status: $isDelivered");
+    setState(() {});
   }
 
   void markOtherMessagesAsSeen(String? chatRoomId) async {
@@ -60,7 +60,9 @@ class _ChatScreenState extends State<ChatScreen>{
           .collection('Chat-Rooms')
           .doc(chatRoomId)
           .collection('Chats')
-          .where('Send-by', isNotEqualTo: myUserName) // Filter messages sent by the other user
+          .where('Send-by',
+              isNotEqualTo:
+                  myUserName) // Filter messages sent by the other user
           .get();
 
       // Update each message to set 'hasBeenSeen' to true
@@ -112,30 +114,23 @@ class _ChatScreenState extends State<ChatScreen>{
   // Initialize shared prefs and messages
   Future<void> onTheLoad() async {
     await getTheSharedPref();
+    checkInternetConnection();
+    receiversConnectivityChecker();
     await getAndSetMessages();
   }
 
-    Future<bool> getUserOnlineStatus(String username) async {
-      try {
-        QuerySnapshot userSnapshot = await FirebaseFirestore.instance
-            .collection('Users')
-            .where('Username', isEqualTo: username)
-            .get();
-
-        if (userSnapshot.docs.isNotEmpty) {
-          // Get the first document (assuming usernames are unique)
-          DocumentSnapshot userDoc = userSnapshot.docs.first;
-          return userDoc['isOnline'] ?? false; // Return online status or false if not available
-        }
-      } catch (e) {
-        print("Error fetching user status: $e");
-      }
-      return false; // Default to offline if user not found
+  Future<bool> getUserOnlineStatus(String username) async {
+    try {
+      return await DatabaseMethods().getUserOnlineStatusByUsername(username);
+    } catch (e) {
+      print("Error fetching user status: $e");
+      return false; // Default to offline if user not found or an error occurs
     }
+  }
 
   receiversConnectivityChecker() async {
-    String? username = chatRoomId?.replaceAll("_", "").replaceAll(myUserName as Pattern, "");
-    isReceiverOnline = await getUserOnlineStatus(username!);
+    String username = chatRoomId!.replaceAll("_", "").replaceAll(myUserName!, "");
+    isReceiverOnline = await getUserOnlineStatus(username);
     setState(() {});
   }
 
@@ -153,18 +148,19 @@ class _ChatScreenState extends State<ChatScreen>{
   }
 
   // Display individual chat message
-  Widget chatMessageTile(String message, bool sendByMe, String time,bool hasSeen, bool hasBeenDelivered) {
+  Widget chatMessageTile(String message, bool sendByMe, String time,
+      bool hasSeen, bool hasBeenDelivered) {
     return Row(
       mainAxisAlignment:
-      sendByMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+          sendByMe ? MainAxisAlignment.end : MainAxisAlignment.start,
       children: [
         ChatBubble(
           // Clipper requires correct syntax, ternary operator needs the format for both bubble types.
           clipper: ChatBubbleClipper2(
               type:
-              sendByMe ? BubbleType.sendBubble : BubbleType.receiverBubble),
+                  sendByMe ? BubbleType.sendBubble : BubbleType.receiverBubble),
           backGroundColor:
-          sendByMe ? const Color(0xFFE7FEDB) : const Color(0xfff6f6f6),
+              sendByMe ? const Color(0xFFE7FEDB) : const Color(0xfff6f6f6),
           margin: const EdgeInsets.only(top: 10),
           child: IntrinsicWidth(
             // Ensure the container resizes based on content width
@@ -183,7 +179,7 @@ class _ChatScreenState extends State<ChatScreen>{
                         fontSize: 15,
                         fontWeight: FontWeight.w400,
                         color: Colors.black87 // Adjust color based on sender
-                    ),
+                        ),
                   ),
                   const SizedBox(height: 0),
                   Row(
@@ -198,7 +194,9 @@ class _ChatScreenState extends State<ChatScreen>{
                         ),
                       ),
                       const SizedBox(width: 5),
-                      sendByMe? messageStatusChecker(hasSeen,hasBeenDelivered):const SizedBox(), // Your message status icon logic
+                      sendByMe
+                          ? messageStatusChecker(hasSeen, hasBeenDelivered)
+                          : const SizedBox(), // Your message status icon logic
                     ],
                   ),
                 ],
@@ -271,18 +269,17 @@ class _ChatScreenState extends State<ChatScreen>{
                 }
 
                 return chatMessageTile(
-                    ds["Message"],
-                    myUserName == ds["Send-by"],
-                    formattedTime,
-                    ds["hasBeenSeen"],
-                    ds["hasBeenDelivered"],
+                  ds["Message"],
+                  myUserName == ds["Send-by"],
+                  formattedTime,
+                  ds["hasBeenSeen"],
+                  ds["hasBeenDelivered"],
                 );
               });
         }
       },
     );
   }
-
 
   // Send a message
   void addMessage(bool sendClicked) {
@@ -301,8 +298,8 @@ class _ChatScreenState extends State<ChatScreen>{
         "Time": formattedTime, // Store formatted date
         "Time-stamp": FieldValue.serverTimestamp(), // Store formatted time
         "Photo": myProfilePic,
-        "hasBeenSeen":false,
-        "hasBeenDelivered":false,
+        "hasBeenSeen": false,
+        "hasBeenDelivered": false,
       };
 
       // Generate a new messageId if it is null
@@ -310,7 +307,7 @@ class _ChatScreenState extends State<ChatScreen>{
 
       // Add the message to the database
       DatabaseMethods()
-          .addMessage(chatRoomId!, messageId!, messageInfoMap,myUserName!)
+          .addMessage(chatRoomId!, messageId!, messageInfoMap, myUserName!)
           .then((value) {
         // If successful, update the last message sent info
         Map<String, dynamic> lastMessageInfoMap = {
@@ -340,7 +337,12 @@ class _ChatScreenState extends State<ChatScreen>{
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: appBarChatScreen(context,widget.name,widget.username, widget.profileUrl, ),
+      appBar: appBarChatScreen(
+        context,
+        widget.name,
+        widget.username,
+        widget.profileUrl,
+      ),
       body: Stack(
         children: [
           Container(
@@ -399,31 +401,31 @@ class _ChatScreenState extends State<ChatScreen>{
                             ),
                             isMic
                                 ? Row(
-                              children: [
-                                const Icon(Icons.attach_file,
-                                    color: Colors.grey),
-                                const SizedBox(width: 15),
-                                Container(
-                                  height: 25,
-                                  width: 25,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey,
-                                    borderRadius:
-                                    BorderRadius.circular(20),
-                                  ),
-                                  child: const Icon(
-                                    Icons.currency_rupee_rounded,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 15),
-                                const Icon(Icons.camera_alt_outlined,
-                                    color: Colors.grey),
-                              ],
-                            )
+                                    children: [
+                                      const Icon(Icons.attach_file,
+                                          color: Colors.grey),
+                                      const SizedBox(width: 15),
+                                      Container(
+                                        height: 25,
+                                        width: 25,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey,
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                        ),
+                                        child: const Icon(
+                                          Icons.currency_rupee_rounded,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 15),
+                                      const Icon(Icons.camera_alt_outlined,
+                                          color: Colors.grey),
+                                    ],
+                                  )
                                 : const Icon(Icons.attach_file,
-                                size: 25, color: Colors.grey),
+                                    size: 25, color: Colors.grey),
                           ],
                         ),
                       ),
@@ -451,7 +453,7 @@ class _ChatScreenState extends State<ChatScreen>{
                       child: isMic
                           ? const Icon(Icons.mic, color: Colors.white, size: 28)
                           : const Icon(Icons.send_rounded,
-                          color: Colors.white, size: 25),
+                              color: Colors.white, size: 25),
                     ),
                   ),
                 )
