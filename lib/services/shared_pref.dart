@@ -14,7 +14,7 @@ class SharedPrefrenceHelper {
 
   Future<void> saveUserName(String username) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setString('username', username);
+    prefs.setString(userNameKey, username);
   }
 
   Future<bool?> saveUserEmail(String getUserEmail) async {
@@ -39,7 +39,7 @@ class SharedPrefrenceHelper {
 
   Future<String?> getUserName() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getString('username');
+    return prefs.getString(userNameKey);
   }
 
   Future<String?> getUserEmail() async {
