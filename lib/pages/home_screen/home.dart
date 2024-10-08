@@ -39,37 +39,69 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    isInternet();
-    updateUserStatus(true);
+    WidgetsBinding.instance.addObserver(this);
+    onInit();
+  }
+
+  Future<void> onInit() async {
+    bool hasInternet = await isInternet();
+    updateUserStatus(hasInternet);
     onTheLoad();
   }
 
   @override
   void dispose() {
-    updateUserStatus(false);
+    updateUserStatus(false); // Set user status to offline when app is closed
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
+  Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
     if (state == AppLifecycleState.paused) {
-      updateUserStatus(false); // Set offline when app is in background
+      // Set user status to offline when the app goes into background
+      updateUserStatus(false);
     } else if (state == AppLifecycleState.resumed) {
-      isInternet(); // Check connectivity when app resumes
+      // Check for internet when the app resumes
+      bool hasInternet = await isInternet();
+      // Update user status based on internet connection
+      updateUserStatus(hasInternet);
     }
   }
 
   void updateUserStatus(bool online) async {
-    User? user = FirebaseAuth.instance.currentUser; // Get current user
+    User? user = FirebaseAuth.instance.currentUser; // Get the current user
     if (user != null) {
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
-        {
-          'isOnline': online,
-          'lastSeen': online ? FieldValue.serverTimestamp() : null,
-        },
-        SetOptions(merge: true), // Merge with existing data
-      );
+      try {
+        // Attempt to update user status
+        if (online) {
+          // User is online, update Last-Seen timestamp
+          await FirebaseFirestore.instance
+              .collection('Users')
+              .doc(user.uid)
+              .set({
+            'isOnline': true,
+            'Last-Seen': FieldValue.serverTimestamp(),
+            // Store current timestamp
+          }, SetOptions(merge: true));
+          print(
+              "User status updated successfully: isOnline = true, Last-Seen updated");
+        } else {
+          // User is offline, just update isOnline without changing Last-Seen
+          await FirebaseFirestore.instance
+              .collection('Users')
+              .doc(user.uid)
+              .set({
+            'isOnline': false,
+            // Do not update Last-Seen
+          }, SetOptions(merge: true));
+          print(
+              "User status updated successfully: isOnline = false, Last-Seen not updated");
+        }
+      } catch (e) {
+        // Catch and print any errors
+        print("Failed to update user status: $e");
+      }
     }
   }
 
@@ -193,6 +225,14 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                     });
                   },
                 ),
+                SizedBox(
+                  width: 5,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.more_vert, color: Colors.white),
+                  onPressed: () {
+                  },
+                ),
               ],
             ),
       body: Column(
@@ -236,27 +276,32 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   Widget chatRoomList() {
     return StreamBuilder(
       stream: chatRoomsStream,
-      builder: (
-          context,
-          AsyncSnapshot snapshot,
-          ) {
-        return snapshot.hasData
-            ? ListView.builder(
+      builder: (context, AsyncSnapshot snapshot) {
+        if (snapshot.hasData && snapshot.data.docs.isNotEmpty) {
+          return ListView.builder(
             padding: EdgeInsets.zero,
-            itemCount: snapshot.data.docs.length,
+            itemCount: snapshot.data.docs.length, // Correct itemCount
             shrinkWrap: true,
             itemBuilder: (context, index) {
-              DocumentSnapshot ds = snapshot.data.doc.length;
+              // Access the document snapshot at the given index
+              DocumentSnapshot ds = snapshot.data.docs[index];
               return ChatRoomListTile(
-                  lastMessage: ds.id,
-                  chatRoomId: ds[""],
-                  myUsername: myUserName!,
-                  time: ds["Last-message-send-timeStamp"]);
-            }):
-        //  const Center(
-        //     child: CircularProgressIndicator(),
-        //   );
-        const Center(child: Text("No chats yet", style: TextStyle(color: Colors.grey),));
+                lastMessage: ds["Last-message"] ?? "", // Use actual field name
+                chatRoomId: ds.id, // Use document ID as chatRoomId
+                myUsername: myUserName!, // Ensure myUserName is set
+                time:
+                    ds["Last-message-send-time"] ?? "", // Use actual field name
+              );
+            },
+          );
+        } else {
+          return const Center(
+            child: Text(
+              "No chats yet",
+              style: TextStyle(color: Colors.grey),
+            ),
+          );
+        }
       },
     );
   }
@@ -342,7 +387,8 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
               radius: 30,
             ),
             title: Text(myUserName == data["Username"]
-                ? "${data["Username"].toString()} (You)" :data["Username"].toString()),
+                ? "${data["Username"].toString()} (You)"
+                : data["Username"].toString()),
             subtitle: Text(data["Name"] ?? "No Name"),
             trailing: const Icon(Icons.arrow_forward),
             onTap: () async {
@@ -403,11 +449,17 @@ class ChatRoomListTile extends StatefulWidget {
 class _ChatRoomListTileState extends State<ChatRoomListTile> {
   String profilePicUrl = "", name = "", username = "", id = "";
 
+  @override
+  void initState() {
+    getThisUserInfo();
+    super.initState();
+  }
+
   getThisUserInfo() async {
     username =
         widget.chatRoomId.replaceAll("_", "").replaceAll(widget.myUsername, "");
     QuerySnapshot querySnapshot =
-        await DatabaseMethods().getUserInfo(username.toUpperCase());
+        await DatabaseMethods().getUserByUsername(username.toUpperCase());
     name = "${querySnapshot.docs[0]["Name"]}";
     profilePicUrl = "${querySnapshot.docs[0]["Photo"]}";
     username = "${querySnapshot.docs[0]["Username"]}";
@@ -417,67 +469,43 @@ class _ChatRoomListTileState extends State<ChatRoomListTile> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 20,
-      width: 23,
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              profilePicUrl == ""
-                  ? const CircularProgressIndicator()
-                  : ClipRRect(
-                      borderRadius: BorderRadius.circular(40),
-                      child: Image.network(
-                        profilePicUrl,
-                        height: 70,
-                        width: 70,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-              const SizedBox(width: 20),
-              SizedBox(
-                width: MediaQuery.of(context).size.width * 0.5,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      username,
-                      style: const TextStyle(
-                        color: Color(0xFF000000),
-                        fontSize: 20,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    SizedBox(
-                      width: MediaQuery.of(context).size.width / 2,
-                      child: Text(
-                        widget.lastMessage,
-                        style: const TextStyle(
-                          color: Colors.black45,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+    return ListTile(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatScreen(
+              name: name,
+              profileUrl: profilePicUrl,
+              username: username,
+            ),
           ),
+        );
+      },
+      leading: profilePicUrl == ""
+          ? const CircularProgressIndicator()
+          : ClipRRect(
+              borderRadius: BorderRadius.circular(50),
+              child: Image.network(
+                profilePicUrl,
+                // height: 70,
+                // width: 70,
+                fit: BoxFit.cover,
+              ),
+            ),
+      title: Text(
+        name,
+        style: const TextStyle(fontSize: 18, color: Colors.black),
+      ),
+      subtitle: Text(
+        widget.lastMessage,
+        style: const TextStyle(fontSize: 14, color: Colors.grey),
+      ),
+      trailing: Column(
+        children: [
           Text(
             widget.time,
-            style: const TextStyle(
-              color: Colors.black45,
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-            ),
+            style: const TextStyle(color: Color(0xFF008069)),
           ),
         ],
       ),

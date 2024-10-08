@@ -48,8 +48,7 @@ class _SignUpState extends State<SignUp> {
 
         String id = userCredential.user!.uid;
         String user = emailController.text.replaceAll("@gmail.com", "");
-        String updateUserName =
-            user.replaceFirst(user[0], user[0].toUpperCase());
+        String updateUserName = user;
         String firstLetter = user.substring(0, 1).toUpperCase();
 
         Map<String, dynamic> userInfoMap = {
@@ -57,9 +56,10 @@ class _SignUpState extends State<SignUp> {
           "E-mail": emailController.text,
           "Username": updateUserName.toUpperCase(),
           "Search-key": firstLetter,
-          "Photo": "assets/images/default.png",
+          "Photo": "https://firebasestorage.googleapis.com/v0/b/chit-chat-app-593b5.appspot.com/o/default.jpeg?alt=media&token=89bae691-aeca-4b4f-90a6-d0a84baa6fa5",
           "Id": id,
           "isOnline": false,
+          "Last-Seen":"online",
         };
 
         await DatabaseMethods().addUserDetails(userInfoMap, id);
@@ -74,12 +74,13 @@ class _SignUpState extends State<SignUp> {
             "Registered Successfully",
             style: TextStyle(fontSize: 20),
           ),
-          backgroundColor: Colors.green,
+          backgroundColor: Color(0xFF008069),
           duration: Duration(seconds: 2),
         ));
-        Navigator.pushReplacement(
+        Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const Home()),
+              (Route<dynamic> route) => false, // This clears the entire stack
         );
       } on FirebaseAuthException catch (e) {
         String message;
@@ -139,7 +140,7 @@ class _SignUpState extends State<SignUp> {
               width: MediaQuery.of(context).size.width,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF7f30fe), Color(0xFF6380fb)],
+                  colors: [Color(0xFF318776),Color(0xFF008069)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -167,7 +168,7 @@ class _SignUpState extends State<SignUp> {
                     child: Text(
                       "Create your account",
                       style: TextStyle(
-                        color: Color(0xFFbbb0ff),
+                        color: Colors.black,
                         fontSize: 18,
                         fontWeight: FontWeight.w500,
                       ),
@@ -298,7 +299,7 @@ class _SignUpState extends State<SignUp> {
                                                   const EdgeInsets.all(10),
                                               decoration: BoxDecoration(
                                                 color:
-                                                    const Color(0xFF6380fb),
+                                                    const Color(0xFF008069),
                                                 borderRadius:
                                                     BorderRadius.circular(10),
                                               ),
@@ -340,7 +341,7 @@ class _SignUpState extends State<SignUp> {
                         },
                         child: const Text(
                           "Sign In",
-                          style: TextStyle(color: Colors.purple),
+                          style: TextStyle(color: Color(0xFF008069)),
                         ),
                       ),
                     ],
@@ -375,6 +376,7 @@ class _SignUpState extends State<SignUp> {
       decoration: InputDecoration(
         hintText: hintText,
         prefixIcon: Icon(icon),
+        prefixIconColor: const Color(0xFF008069),
         border: const OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(10)),
         ),
