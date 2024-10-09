@@ -1,4 +1,4 @@
-import 'package:chat_app/pages/sign_up_page.dart';
+import 'package:chat_app/pages/sign_in_page.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
@@ -24,7 +24,7 @@ class MyApp extends StatelessWidget {
           if (snapshot.hasData) {
             return const Home();
           } else {
-            return const SignUp();
+            return const SignInPage();
           }
         },
       ),
