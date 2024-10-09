@@ -94,7 +94,7 @@ class _ChatScreenState extends State<ChatScreen> {
     myName = await SharedPrefrenceHelper().getDisplayName();
     myUserName = await SharedPrefrenceHelper().getUserName();
     myEmail = await SharedPrefrenceHelper().getUserEmail();
-    myProfilePic = await SharedPrefrenceHelper().getUserPicKey();
+    myProfilePic = await SharedPrefrenceHelper().getUserPhoto();
     chatRoomId = DatabaseMethods().getChatRoomIdByUIDs(myId!, widget.userId);
     setState(() {});
   }

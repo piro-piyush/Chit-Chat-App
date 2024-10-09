@@ -2,12 +2,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'shared_pref.dart';
 
 class DatabaseMethods {
+
   Future<bool> addUserDetails(Map<String, dynamic> userInfoMap, String id) async {
     try {
       await FirebaseFirestore.instance
           .collection("Users")
           .doc(id)
           .set(userInfoMap);
+      print("User have been added succfully");
       return true; // Return true on successful addition
     } catch (e) {
       print("Error adding user details: $e");

@@ -1,8 +1,10 @@
+import 'package:flutter/material.dart';
+
 import 'package:chat_app/services/database.dart';
+import 'package:chat_app/pages/settings.dart' as setting;
 import 'package:chat_app/services/shared_pref.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
 import '../../services/internet_connectivity_checker.dart';
 import '../chat_screen/chat_screen.dart';
 
@@ -19,14 +21,14 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   var queryResultSet = [];
   var tempSearchStore = [];
 
-  String? myName, myProfilePic, myUserName, myEmail,myId;
+  String? myName, myPhoto, myUserName, myEmail,myId;
   Stream? chatRoomsStream;
 
   getTheSharedPref() async {
     myName = await SharedPrefrenceHelper().getDisplayName();
     myUserName = await SharedPrefrenceHelper().getUserName();
     myEmail = await SharedPrefrenceHelper().getUserEmail();
-    myProfilePic = await SharedPrefrenceHelper().getUserPicKey();
+    myPhoto = await SharedPrefrenceHelper().getUserPhoto();
     myId = await SharedPrefrenceHelper().getUserId();
     setState(() {});
   }
@@ -200,34 +202,99 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
               ],
             )
           : AppBar(
-              backgroundColor: const Color(0xFF008069),
-              title: const Text(
-                "Chit Chat",
-                style: TextStyle(
-                  color: Color(0xFFFFFFFF),
-                  fontSize: 24,
-                  fontWeight: FontWeight.w500,
+        backgroundColor: const Color(0xFF008069),
+        title: const Text(
+          "Chit Chat",
+          style: TextStyle(
+            color: Color(0xFFFFFFFF),
+            fontSize: 24,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search, color: Colors.white),
+            onPressed: () {
+              setState(() {
+                search = true; // Enable search mode
+              });
+            },
+          ),
+          const SizedBox(width: 5),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              // Handle actions based on the selected value
+              switch (value) {
+                case 'New group':
+                // Navigate or perform an action for New group
+                  break;
+                case 'New broadcast':
+                // Action for New broadcast
+                  break;
+                case 'Linked devices':
+                // Action for Linked devices
+                  break;
+                case 'Starred messages':
+                // Action for Starred messages
+                  break;
+                case 'Payments':
+                // Action for Payments
+                  break;
+                case 'Settings':
+                // Navigate to Settings page
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const setting.Settings(),
+                    ),
+                  );
+                  break;
+                case 'Logout':
+                // Handle logout functionality
+                // FirebaseAuth.instance.signOut();
+                  print('User logged out');
+                  break;
+              }
+            },
+            itemBuilder: (BuildContext context) {
+              return [
+                const PopupMenuItem<String>(
+                  value: 'New group',
+                  child: Text('New group', style: TextStyle(color: Colors.black)),
                 ),
-              ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.search, color: Colors.white),
-                  onPressed: () {
-                    setState(() {
-                      search = true; // Enable search mode
-                    });
-                  },
+                const PopupMenuItem<String>(
+                  value: 'New broadcast',
+                  child: Text('New broadcast', style: TextStyle(color: Colors.black)),
                 ),
-                const SizedBox(
-                  width: 5,
+                const PopupMenuItem<String>(
+                  value: 'Linked devices',
+                  child: Text('Linked devices', style: TextStyle(color: Colors.black)),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.more_vert, color: Colors.white),
-                  onPressed: () {
-                  },
+                const PopupMenuItem<String>(
+                  value: 'Starred messages',
+                  child: Text('Starred messages', style: TextStyle(color: Colors.black)),
                 ),
-              ],
-            ),
+                const PopupMenuItem<String>(
+                  value: 'Payments',
+                  child: Text('Payments', style: TextStyle(color: Colors.black)),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'Settings',
+                  child: Text('Settings', style: TextStyle(color: Colors.black)),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'Logout',
+                  child: Text('Logout', style: TextStyle(color: Colors.black)),
+                ),
+              ];
+            },
+            color: Colors.white, // White background for the menu
+            icon: const Icon(Icons.more_vert, color: Colors.white), // Same icon color as AppBar
+          ),
+
+        ],
+      ),
+
       body: Column(
         children: [
           Expanded(
