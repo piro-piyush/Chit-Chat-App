@@ -74,7 +74,7 @@ class _ForgetPasswordState extends State<ForgetPassword> {
                     child: Text(
                       "Enter your email",
                       style: TextStyle(
-                        color: Color(0xFFbbb0ff),
+                        color: Colors.black,
                         fontSize: 18,
                         fontWeight: FontWeight.w500,
                       ),
@@ -99,7 +99,7 @@ class _ForgetPasswordState extends State<ForgetPassword> {
       width: size.width,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF7f30fe), Color(0xFF6380fb)],
+          colors: [Color(0xFF318776),Color(0xFF008069)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
