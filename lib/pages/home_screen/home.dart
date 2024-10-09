@@ -19,7 +19,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   var queryResultSet = [];
   var tempSearchStore = [];
 
-  String? myName, myProfilePic, myUserName, myEmail;
+  String? myName, myProfilePic, myUserName, myEmail,myId;
   Stream? chatRoomsStream;
 
   getTheSharedPref() async {
@@ -27,6 +27,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     myUserName = await SharedPrefrenceHelper().getUserName();
     myEmail = await SharedPrefrenceHelper().getUserEmail();
     myProfilePic = await SharedPrefrenceHelper().getUserPicKey();
+    myId = await SharedPrefrenceHelper().getUserId();
     setState(() {});
   }
 
@@ -102,14 +103,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         // Catch and print any errors
         print("Failed to update user status: $e");
       }
-    }
-  }
-
-  getChatRoomIdByUsername(String a, String b) {
-    if (a.substring(0, 1).codeUnitAt(0) > b.substring(0, 1).codeUnitAt(0)) {
-      return "${b}_$a";
-    } else {
-      return "a_$b";
     }
   }
 
@@ -225,7 +218,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                     });
                   },
                 ),
-                SizedBox(
+                const SizedBox(
                   width: 5,
                 ),
                 IconButton(
@@ -290,7 +283,8 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                 chatRoomId: ds.id, // Use document ID as chatRoomId
                 myUsername: myUserName!, // Ensure myUserName is set
                 time:
-                    ds["Last-message-send-time"] ?? "", // Use actual field name
+                    ds["Last-message-send-time"] ?? "",
+                myId: myId!
               );
             },
           );
@@ -381,7 +375,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         borderRadius: BorderRadius.circular(10.0),
         child: ListTile(
             leading: CircleAvatar(
-              backgroundImage: AssetImage(
+              backgroundImage: NetworkImage(
                 data["Photo"] ?? "assets/images/default.png",
               ),
               radius: 30,
@@ -395,27 +389,13 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
               // Update the search state
               search = false;
               setState(() {});
-
               // Generate the chat room ID using usernames
-              var chatRoomId =
-                  getChatRoomIdByUsername(myUserName!, data["Username"]);
-
-              // Check if the chat room already exists
-              bool chatExists =
-                  await DatabaseMethods().doesChatRoomExist(chatRoomId);
-
-              // If chat room doesn't exist, create it
-              if (!chatExists) {
-                Map<String, dynamic> chatRoomInfoMap = {
-                  "Users": [myUserName, data["Username"]],
-                };
-
-                // Create the chat room for the first time
+              var chatRoomId = DatabaseMethods().getChatRoomIdByUIDs(myId!, data["Id"]);
+              Map<String, dynamic> chatRoomInfoMap = {
+                "Users": [myUserName, data["Username"]],
+              };
                 await DatabaseMethods()
                     .createChatRoom(chatRoomId, chatRoomInfoMap);
-              }
-
-              // Navigate to the chat screen regardless of whether it was created or not
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -423,6 +403,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                     name: data["Name"],
                     profileUrl: data["Photo"],
                     username: data["Username"],
+                    userId: data["Id"],
                   ),
                 ),
               );
@@ -433,13 +414,14 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
 }
 
 class ChatRoomListTile extends StatefulWidget {
-  final String lastMessage, chatRoomId, myUsername, time;
+  final String lastMessage, chatRoomId, myUsername,myId, time;
 
   const ChatRoomListTile(
       {required this.lastMessage,
       required this.chatRoomId,
       required this.myUsername,
       required this.time,
+        required this.myId,
       super.key});
 
   @override
@@ -456,10 +438,9 @@ class _ChatRoomListTileState extends State<ChatRoomListTile> {
   }
 
   getThisUserInfo() async {
-    username =
-        widget.chatRoomId.replaceAll("_", "").replaceAll(widget.myUsername, "");
+    id = widget.chatRoomId.replaceAll("_", "").replaceAll(widget.myId, "");
     QuerySnapshot querySnapshot =
-        await DatabaseMethods().getUserByUsername(username.toUpperCase());
+        await DatabaseMethods().getUserByIds(id);
     name = "${querySnapshot.docs[0]["Name"]}";
     profilePicUrl = "${querySnapshot.docs[0]["Photo"]}";
     username = "${querySnapshot.docs[0]["Username"]}";
@@ -478,6 +459,7 @@ class _ChatRoomListTileState extends State<ChatRoomListTile> {
               name: name,
               profileUrl: profilePicUrl,
               username: username,
+              userId: id,
             ),
           ),
         );

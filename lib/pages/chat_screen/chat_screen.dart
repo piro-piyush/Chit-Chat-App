@@ -8,12 +8,13 @@ import '../../services/internet_connectivity_checker.dart';
 import 'app_bar_chat.dart';
 
 class ChatScreen extends StatefulWidget {
-  final String name, profileUrl, username;
+  final String name, profileUrl, username, userId;
 
   const ChatScreen({
     required this.name,
     required this.profileUrl,
     required this.username,
+    required this.userId,
     super.key,
   });
 
@@ -23,7 +24,7 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController messageController = TextEditingController();
-  String? myUserName, myProfilePic, myName, myEmail, messageId, chatRoomId;
+  String? myUserName, myProfilePic, myName, myEmail,myId, messageId, chatRoomId;
   Stream? messageStream;
   bool isReceiverOnline = false;
   bool hasInternet = false;
@@ -94,7 +95,7 @@ class _ChatScreenState extends State<ChatScreen> {
     myUserName = await SharedPrefrenceHelper().getUserName();
     myEmail = await SharedPrefrenceHelper().getUserEmail();
     myProfilePic = await SharedPrefrenceHelper().getUserPicKey();
-    chatRoomId = getChatRoomIdByUsername(widget.username, myUserName!);
+    chatRoomId = DatabaseMethods().getChatRoomIdByUIDs(myId!, widget.userId);
     setState(() {});
   }
 

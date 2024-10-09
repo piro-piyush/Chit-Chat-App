@@ -43,6 +43,20 @@ class DatabaseMethods {
     }
   }
 
+  Future<QuerySnapshot> getUserByIds(String id) async {
+    try {
+      return await FirebaseFirestore.instance
+          .collection("Users")
+          .where("Id", isEqualTo: id)
+          .get();
+    } catch (e) {
+      print("Error fetching user by Id: $e");
+      return await FirebaseFirestore.instance.collection("Users")
+          .limit(0)
+          .get(); // Return an empty QuerySnapshot
+    }
+  }
+
   Future<QuerySnapshot> search(String query) async {
     try {
       return await FirebaseFirestore.instance
@@ -58,24 +72,35 @@ class DatabaseMethods {
     }
   }
 
+  String getChatRoomIdByUIDs(String uid1, String uid2) {
+    // Sort UIDs alphabetically to ensure consistency
+    List<String> uids = [uid1, uid2];
+    uids.sort(); // Sorts UIDs alphabetically
+    return "${uids[0]}_${uids[1]}";
+  }
+
   Future<bool> createChatRoom(String chatRoomId, Map<String, dynamic> chatRoomInfoMap) async {
     try {
+      // Check if the chat room already exists
       final snapshot = await FirebaseFirestore.instance
           .collection("Chat-Rooms")
           .doc(chatRoomId)
           .get();
       if (snapshot.exists) {
+        // Chat room already exists
         print("Chat room already exists.");
-        return false; // Return false if the chat room already exists
+        return true; // Indicating the chat room exists
       } else {
+        // Create a new chat room
         print("Creating a new chat room.");
         await FirebaseFirestore.instance
             .collection("Chat-Rooms")
             .doc(chatRoomId)
             .set(chatRoomInfoMap);
-        return true; // Return true if created successfully
+        return true; // Indicating the chat room was created successfully
       }
     } catch (e) {
+      // Error handling
       print("Error creating chat room: $e");
       return false; // Return false on error
     }
@@ -243,7 +268,6 @@ class DatabaseMethods {
       if (userSnapshot.docs.isNotEmpty) {
         // Get the first document (since usernames should be unique)
         DocumentSnapshot userDoc = userSnapshot.docs.first;
-
         // Check and return 'isOnline' status, defaulting to false if not found
         bool isOnline = userDoc['isOnline'] ?? false;
         return isOnline;
