@@ -51,43 +51,44 @@ class _ForgetPasswordState extends State<ForgetPassword> {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Stack(
-          children: [
-            // Background gradient
-            _buildBackgroundGradient(size),
-            Padding(
-              padding: const EdgeInsets.only(top: 70),
-              child: Column(
-                children: [
-                  const Center(
-                    child: Text(
-                      "Password Recovery",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+      body: Stack(
+        children: [
+          // Background gradient
+          _buildBackgroundGradient(size),
+          Padding(
+            padding: const EdgeInsets.only(top: 70),
+            child: Column(
+              children: [
+                const Center(
+                  child: Text(
+                    "Password Recovery",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const Center(
-                    child: Text(
-                      "Enter your email",
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                      ),
+                ),
+                const Center(
+                  child: Text(
+                    "Enter your email",
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  _buildEmailForm(context, size),
-                  const SizedBox(height: 20),
-                  _buildSignUpOption(),
-                ],
-              ),
+                ),
+                _buildEmailForm(context, size),
+              ],
             ),
-          ],
-        ),
+          ),
+          Positioned(
+              left: 0,
+              right: 0,
+              bottom: 20,
+              child: _buildSignUpOption()),
+        ],
       ),
     );
   }
@@ -95,7 +96,7 @@ class _ForgetPasswordState extends State<ForgetPassword> {
   // Background gradient widget
   Widget _buildBackgroundGradient(Size size) {
     return Container(
-      height: size.height / 4,
+      height: size.height / 3,
       width: size.width,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -152,24 +153,27 @@ class _ForgetPasswordState extends State<ForgetPassword> {
 
   // Widget for email input field
   Widget _buildEmailInput() {
-    return Container(
-      padding: const EdgeInsets.only(left: 10),
-      decoration: BoxDecoration(
-        border: Border.all(width: 1, color: Colors.black38),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: TextFormField(
-        controller: emailController,
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return "Please enter email";
-          }
-          return null;
-        },
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          prefixIcon: Icon(Icons.mail, color: Color(0xFF7f30fe)),
+    return TextFormField(
+      controller: emailController,
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return "Please enter email";
+        }
+        return null;
+      },
+      decoration: const InputDecoration(
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(10)),
         ),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.grey, width: 1.5), // Grey border when not focused
+          borderRadius: BorderRadius.all(Radius.circular(10)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Color(0xFF008069), width: 2), // Same color as prefix icon when focused
+          borderRadius: BorderRadius.all(Radius.circular(10)),
+        ),
+        prefixIcon: Icon(Icons.mail, color: Color(0xFF008069)),
       ),
     );
   }
@@ -187,7 +191,7 @@ class _ForgetPasswordState extends State<ForgetPassword> {
             child: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFF6380fb),
+                color: const Color(0xFF008069),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Center(
