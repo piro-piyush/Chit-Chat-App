@@ -171,7 +171,6 @@ Contributions are always welcome! Please feel free to fork this repository and s
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## Contact
-
 For any questions, feel free to reach out:
 
 - **Name**: Piyush
