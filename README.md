@@ -177,3 +177,25 @@ For any questions, feel free to reach out:
 - **Email**: piyush72717272@gmail.com
 - **GitHub**: [github.com/piro-piyush](https://github.com/piro-piyush).
 - 
+DB Rules
+```bash
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users collection rule
+    match /Users/{userId} {
+      allow read, write: if request.auth != null; // Allow authenticated users to read/write users
+    }
+
+    // Chat-Rooms collection rule
+    match /Chat-Rooms/{chatRoomId} {
+      allow read, write: if true; // Allow anyone to read/write chat rooms
+
+      // Subcollection for messages (Chats)
+      match /Chats/{messageId} {
+        allow read, write: if request.auth != null; // Allow authenticated users to read/write chats, including hasBeenSeen
+      }
+    }
+  }
+}
+```
