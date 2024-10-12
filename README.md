@@ -200,5 +200,3 @@ service cloud.firestore {
 }
 ```
 
- 
-
