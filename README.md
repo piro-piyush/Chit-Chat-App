@@ -126,9 +126,7 @@ To get started with the **Chit Chat** app locally, follow these steps:
     match /Profile-photos/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
       // Allow authenticated users to read/write their own profile photo
-    }
-  }
-}
+    }}}
     ```
 
 5. **Firebase Dependencies:**
