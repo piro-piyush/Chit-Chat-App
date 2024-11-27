@@ -105,7 +105,7 @@ To get started with the **Chit Chat** app locally, follow these steps:
 
     ```bash
     service cloud.firestore {
-  match /databases/{database}/documents {
+    match /databases/{database}/documents {
 
     // Users collection rule
     match /Users/{userId} {
