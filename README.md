@@ -105,12 +105,30 @@ To get started with the **Chit Chat** app locally, follow these steps:
 
     ```bash
     service cloud.firestore {
-      match /databases/{database}/documents {
-        match /Chat-Rooms/{chatRoomId} {
-          allow read, write: if request.auth != null;
-        }
+  match /databases/{database}/documents {
+
+    // Users collection rule
+    match /Users/{userId} {
+      allow read, write: if request.auth != null; // Allow authenticated users to read/write users
+    }
+
+    // Chat-Rooms collection rule
+    match /Chat-Rooms/{chatRoomId} {
+      allow read, write: if true; // Allow anyone to read/write chat rooms
+
+      // Subcollection for messages (Chats)
+      match /Chats/{messageId} {
+        allow read, write: if request.auth != null; // Allow authenticated users to read/write chats, including hasBeenSeen
       }
     }
+
+    // Profile_photos collection rule
+    match /Profile-photos/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Allow authenticated users to read/write their own profile photo
+    }
+  }
+}
     ```
 
 5. **Firebase Dependencies:**
